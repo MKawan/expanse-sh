@@ -11,7 +11,7 @@ sudo pacman -S --noconfirm \
 nodejs npm \
 git curl wget \
 base-devel \
-webkit2gtk gtk3 libsoup \
+webkit2gtk-4.1 gtk3 libsoup \
 cmake ninja gcc clang \
 rustup
 
