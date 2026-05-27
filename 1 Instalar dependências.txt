@@ -210,3 +210,8 @@ qemu-system-x86_64 \
 -drive file="/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2",format=qcow2 \
 -cdrom "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/iso/arch/archlinux.iso" \
 -boot d
+
+
+
+
+archvm

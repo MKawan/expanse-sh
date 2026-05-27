@@ -1,55 +1,150 @@
 #!/bin/bash
-
 set -e
 
-echo "=== CONFIGURANDO SISTEMA BASE ==="
+echo "=== EXPANSE OS CHROOT FINAL ==="
 
-ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
-hwclock --systohc
+USER="expanse"
 
-echo "pt_BR.UTF-8 UTF-8" >> /etc/locale.gen
-echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-locale-gen
+# =========================
+# 1. PACOTES BASE
+# =========================
 
-echo "LANG=pt_BR.UTF-8" > /etc/locale.conf
+echo "=== BASE SYSTEM ==="
 
-echo "archvm" > /etc/hostname
+pacman -S --noconfirm \
+linux linux-firmware \
+networkmanager \
+sudo \
+vim nano \
+efibootmgr \
+base-devel \
+git curl wget
 
-cat <<EOF > /etc/hosts
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   archvm.localdomain archvm
-EOF
+systemctl enable NetworkManager
 
-echo "Instalando bootloader (systemd-boot)..."
+# =========================
+# 2. BOOTLOADER (SYSTEMD-BOOT)
+# =========================
+
+echo "=== SYSTEMD-BOOT INSTALL ==="
 
 bootctl install
 
 mkdir -p /boot/loader/entries
 
 cat <<EOF > /boot/loader/loader.conf
-default arch
+default expanse
 timeout 3
 editor no
 EOF
 
-UUID=$(blkid -s UUID -o value /dev/sda2)
+# pega UUID automaticamente (root = /)
+ROOT_UUID=$(blkid -s UUID -o value $(findmnt -n -o SOURCE /))
 
-cat <<EOF > /boot/loader/entries/arch.conf
-title Arch Linux
-linux /vmlinuz-linux
-initrd /initramfs-linux.img
-options root=UUID=$UUID rw
+cat <<EOF > /boot/loader/entries/expanse.conf
+title   Expanse OS
+linux   /vmlinuz-linux
+initrd  /initramfs-linux.img
+options root=UUID=$ROOT_UUID rw
 EOF
 
-echo "Instalando pacotes extras..."
-pacman -S --noconfirm networkmanager sudo
+# =========================
+# 3. USUÁRIO
+# =========================
 
-systemctl enable NetworkManager
+echo "=== USER SETUP ==="
 
-echo "Defina a senha do root:"
-passwd
+useradd -m -G wheel $USER
+echo "$USER:expanse" | chpasswd
 
-echo "=== FINALIZADO ==="
-echo "Agora saia: exit"
-echo "Depois: umount -R /mnt && reboot"
+echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
+
+# =========================
+# 4. AUTO LOGIN TTY1
+# =========================
+
+echo "=== AUTO LOGIN ==="
+
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+
+cat <<EOF > /etc/systemd/system/getty@tty1.service.d/override.conf
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/agetty --autologin $USER --noclear %I \$TERM
+EOF
+
+# =========================
+# 5. RUNTIME GRAFICO
+# =========================
+
+echo "=== WAYLAND + HYPRLAND ==="
+
+pacman -S --noconfirm \
+hyprland \
+xdg-desktop-portal-hyprland \
+kitty \
+pipewire pipewire-pulse wireplumber \
+wl-clipboard \
+xdg-utils
+
+# =========================
+# 6. AUTO START HYPRLAND
+# =========================
+
+echo "=== AUTO START HYPRLAND ==="
+
+cat <<EOF >> /home/$USER/.bash_profile
+
+if [[ -z \$WAYLAND_DISPLAY ]] && [[ \$(tty) == /dev/tty1 ]]; then
+    exec Hyprland
+fi
+
+EOF
+
+chown $USER:$USER /home/$USER/.bash_profile
+
+# =========================
+# 7. EXPANSE SHELL (TAURI + VITE START)
+# =========================
+
+echo "=== SHELL START CONFIG ==="
+
+mkdir -p /home/$USER/workspace/expanse-shell
+
+cat <<EOF > /home/$USER/workspace/expanse-shell/start.sh
+#!/bin/bash
+
+cd /home/$USER/workspace/expanse-shell
+
+# modo dev
+npm run dev &
+sleep 3
+npm run tauri dev
+EOF
+
+chmod +x /home/$USER/workspace/expanse-shell/start.sh
+chown -R $USER:$USER /home/$USER/workspace
+
+# =========================
+# 8. HYPRLAND AUTO START SHELL
+# =========================
+
+mkdir -p /home/$USER/.config/hypr
+
+cat <<EOF > /home/$USER/.config/hypr/hyprland.conf
+
+# ExpansE OS Shell auto start
+exec-once = /home/$USER/workspace/expanse-shell/start.sh
+
+EOF
+
+chown -R $USER:$USER /home/$USER/.config
+
+# =========================
+# 9. FINAL MESSAGE
+# =========================
+
+echo "=== INSTALL COMPLETO ==="
+echo "Agora saia do chroot e reinicie:"
+echo "umount -R /mnt"
+echo "reboot"
