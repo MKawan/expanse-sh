@@ -6,16 +6,32 @@ BASE="/home/$USER/workspace"
 
 echo "=== INSTALL DEV STACK ==="
 
+# base system tools
 sudo pacman -S --noconfirm \
-nodejs npm rustup \
+nodejs npm \
 git curl wget \
 base-devel \
 webkit2gtk gtk3 libsoup \
 cmake ninja gcc clang \
-codium
+rustup
 
+# pnpm
 sudo npm install -g pnpm
+
+# rust
 rustup default stable
+
+# yay (AUR helper para VSCodium)
+if ! command -v yay &> /dev/null; then
+  echo "=== INSTALL YAY ==="
+  sudo pacman -S --noconfirm git base-devel
+  git clone https://aur.archlinux.org/yay.git /tmp/yay
+  cd /tmp/yay
+  makepkg -si --noconfirm
+fi
+
+# VSCodium (CORRETO)
+yay -S --noconfirm vscodium-bin
 
 echo "=== CRIANDO WORKSPACE ==="
 
@@ -26,18 +42,16 @@ cd $BASE
 
 rm -rf expanse-shell || true
 
-echo "=== VITE + TAURI PROJECT ==="
-
+echo "=== VITE PROJECT ==="
 npm create vite@latest expanse-shell -- --template react-ts
-cd expanse-shell
 
+cd expanse-shell
 npm install
 
-echo "=== TAURI INIT ==="
-cargo install create-tauri-app || true
-npx tauri init --ci
+echo "=== TAURI INIT (CORRETO) ==="
+npx create-tauri-app@latest . --ci --template react-ts
 
-echo "=== CONFIGURAÇÃO AUTOMÁTICA TAURI ==="
+echo "=== CONFIG TAURI DEV ==="
 
 cat <<EOT > src-tauri/tauri.conf.json
 {
@@ -48,7 +62,7 @@ cat <<EOT > src-tauri/tauri.conf.json
 }
 EOT
 
-echo "=== START SCRIPT ==="
+echo "=== START DEV SCRIPT ==="
 
 cat <<EOT > start-dev.sh
 #!/bin/bash
@@ -64,10 +78,10 @@ chmod +x start-dev.sh
 
 EOF
 
-echo "=== CONFIG VSCODIUM WORKSPACE ==="
+echo "=== ABRINDO VSCODIUM NO PROJETO ==="
 
 sudo -u $USER bash <<EOF
-codium $BASE
+vscodium $BASE/expanse-shell
 EOF
 
 echo "=== FINALIZADO ==="
