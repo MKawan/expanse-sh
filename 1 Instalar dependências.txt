@@ -1,0 +1,212 @@
+1. Instalar dependências no HOST
+
+Arch: sudo pacman -S qemu-full virt-manager bridge-utils dnsmasq vde2 openbsd-netcat ovmf
+
+Debian/Ubuntu: sudo apt install qemu-system qemu-utils ovmf virt-manager
+
+2. Verificar KVM
+
+lsmod | grep kvm
+
+3. Criar disco virtual
+
+qemu-img create -f qcow2 "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2" 40G
+
+4. Baixar ISO Arch
+
+https://archlinux.org/download/?utm_source=chatgpt.com
+
+5. Rodar VM inicial
+
+qemu-system-x86_64 \
+-enable-kvm \
+-m 4G \
+-smp 2 \
+-cpu host \
+-vga virtio \
+-display gtk,gl=on \
+-device virtio-gpu-pci \
+-device intel-hda \
+-device hda-duplex \
+-net nic \
+-net user \
+-chardev spicevmc,id=spicechannel0,name=vdagent \
+-drive file="/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2",format=qcow2 \
+-cdrom "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/iso/arch/archlinux.iso" \
+-boot d
+
+6. Instalar Arch minimal
+
+6.1 Dentro da VM: ping google.com
+
+6.2 Particionar: fdisk /dev/sda
+
+6.3 Formatar
+
+mkfs.fat -F32 /dev/sda1
+mkfs.ext4 /dev/sda2
+
+6.4 Montar
+
+mount /dev/sda2 /mnt
+mkdir -p /mnt/boot
+mount /dev/sda1 /mnt/boot
+
+6.5 Instalar base
+
+pacstrap /mnt base linux linux-firmware sudo networkmanager git base-devel
+
+6.6 Gerar fstab
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+6.7 Entrar no sistema
+
+arch-chroot /mnt
+
+7. Configuração básica
+Timezone
+
+ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+hwclock --systohc
+
+Locale
+nano /etc/locale.gen
+
+Descomente:
+
+en_US.UTF-8 UTF-8
+pt_BR.UTF-8 UTF-8
+
+Depois: locale-gen
+
+Hostname
+echo "expanse-os" > /etc/hostname
+
+Root password
+passwd
+
+8. Bootloader
+pacman -S grub efibootmgr
+
+8.1 Instalar GRUB
+
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+
+8.2 Config
+
+grub-mkconfig -o /boot/grub/grub.cfg
+
+9. Instalar stack gráfica minimalista
+
+Após reboot:
+
+sudo pacman -S \
+wayland \
+mesa \
+vulkan-radeon \
+vulkan-intel \
+kitty \
+hyprland \
+xdg-desktop-portal-hyprland \
+pipewire \
+wireplumber \
+network-manager-applet \
+polkit-kde-agent \
+wl-clipboard
+
+10. Instalar Rust
+
+curl https://sh.rustup.rs -sSf | sh
+
+11. Instalar Node/Pnpm
+
+sudo pacman -S nodejs npm
+sudo npm install -g pnpm
+
+12. Instalar VSCodium
+VSCodium Linux Downloads
+
+No Arch:
+
+sudo pacman -S codium
+
+13. Dependências Tauri
+
+sudo pacman -S \
+webkit2gtk \
+openssl \
+appmenu-gtk-module \
+gtk3 \
+libsoup3
+
+14. Criar app Tauri
+
+pnpm create tauri-app
+
+Escolha:
+
+React
+Vite
+Rust
+
+15. Rodar ambiente
+
+cd app
+pnpm install
+pnpm tauri dev
+
+16. Transformar em shell fullscreen
+
+Depois:
+
+Hyprland config
+
+nano ~/.config/hypr/hyprland.conf
+
+Auto start:
+
+exec-once = seu-app-tauri
+
+
+
+Rodando apos instalação.
+
+qemu-system-x86_64 \
+-enable-kvm \
+-m 4G \
+-smp 6 \
+-cpu host \
+-vga virtio \
+-display gtk,gl=on \
+-device virtio-gpu-pci \
+-device intel-hda \
+-device hda-duplex \
+-net nic \
+-net user \
+-device virtio-serial-pci \
+-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
+-chardev spicevmc,id=spicechannel0,name=vdagent \
+-drive file="/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2",format=qcow2 
+
+modo uefi:
+
+qemu-system-x86_64 \
+-enable-kvm \
+-machine type=q35,accel=kvm \
+-cpu host \
+-smp 4 \
+-m 4G \
+-vga none \
+-device virtio-gpu-pci \
+-display gtk,gl=on \
+-device intel-hda \
+-device hda-duplex \
+-net nic \
+-net user \
+-chardev spicevmc,id=spicechannel0,name=vdagent \
+-drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+-drive if=pflash,format=raw,file=/usr/share/OVMF/OVMF_VARS_4M.fd \
+-drive file="/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2",format=qcow2 \
+-cdrom "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/iso/arch/archlinux.iso" \
+-boot d
