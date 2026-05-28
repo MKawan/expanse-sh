@@ -1,0 +1,51 @@
+1. Instalar dependências no HOST
+
+Arch: sudo pacman -S qemu-full virt-manager bridge-utils dnsmasq vde2 openbsd-netcat ovmf
+
+Debian/Ubuntu: sudo apt install qemu-system qemu-utils ovmf virt-manager
+
+2. Verificar KVM
+
+lsmod | grep kvm
+
+3. Criar disco virtual
+
+qemu-img create -f qcow2 "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2" 40G
+
+4. Criar Install.
+
+qemu-system-x86_64 \
+-enable-kvm \
+-m 4G \
+-smp 2 \
+-cpu host \
+-vga virtio \
+-display gtk,gl=on \
+-device virtio-gpu-pci \
+-device intel-hda \
+-device hda-duplex \
+-net nic \
+-net user \
+-device virtio-serial-pci \
+-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
+-chardev spicevmc,id=spicechannel0,name=vdagent \
+-drive file="/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2",format=qcow2 \
+-cdrom "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/iso/arch/archlinux.iso" \
+-boot d
+
+
+5. Iniciar o boot.
+
+qemu-system-x86_64 \
+-enable-kvm \
+-m 4G \
+-smp 2 \
+-cpu host \
+-machine q35,accel=kvm \
+-drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+-drive if=pflash,format=raw,file=/usr/share/OVMF/OVMF_VARS_4M.fd \
+-drive file="/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2",format=qcow2 \
+-display gtk \
+-vga virtio \
+-net nic \
+-net user

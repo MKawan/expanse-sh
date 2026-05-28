@@ -1,0 +1,82 @@
+#!/bin/bash
+set -e
+
+USER="expanse"
+BASE="/home/$USER/workspace"
+
+echo "=== INSTALL DEV STACK ==="
+sudo pacman -S --noconfirm \
+  nodejs npm \
+  webkit2gtk-4.1 gtk3 libsoup3 \
+  cmake ninja gcc clang \
+  rustup
+
+sudo npm install -g pnpm
+rustup default stable
+
+# Instalação do VSCodium via repositório não-root (Simulação segura para script)
+if ! command -v vscodium &> /dev/null; then
+  echo "Para desenvolvimento, instale o vscodium posteriormente via AUR como usuário comum."
+fi
+
+echo "=== CRIANDO WORKSPACE DO ECOSSISTEMA ==="
+sudo -u $USER bash <<EOF
+set -e
+mkdir -p $BASE
+cd $BASE
+rm -rf expanse-shell || true
+
+# Cria diretamente a estrutura do tauri integrada ao Vite+React+TS de forma limpa
+npx create-tauri-app@latest expanse-shell \
+  --manager npm \
+  --template react-ts \
+  --y
+
+cd expanse-shell
+npm install
+
+echo "=== CUSTOMIZANDO TAURI PARA MODO KIOCK / FULLSCREEN ==="
+# Injeta as configurações no tauri.conf.json para garantir bordas falsas e tela cheia
+cat <<EOT > src-tauri/tauri.conf.json
+{
+  "productName": "expanse-shell",
+  "version": "0.1.0",
+  "identifier": "com.expanse.shell",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devPath": "http://localhost:5173",
+    "distDir": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "expanse-shell",
+        "width": 1920,
+        "height": 1080,
+        "resizable": false,
+        "fullscreen": true,
+        "decorations": false
+      }
+    ]
+  }
+}
+EOT
+
+echo "=== ANTECIPANDO DOWNLOAD E COMPILAÇÃO DO RUST ==="
+# Baixa e compila as dependências do Rust agora. Evita que o primeiro boot trave!
+npm run tauri build -- --debug || true
+
+echo "=== START DEV SCRIPT ==="
+cat <<EOT > start-dev.sh
+#!/bin/bash
+cd $BASE/expanse-shell
+npm run dev -- --host &
+sleep 5
+npm run tauri dev
+EOT
+
+chmod +x start-dev.sh
+EOF
+
+echo "=== FINALIZADO ==="
+echo "Workspace pronto: $BASE/expanse-shell"
