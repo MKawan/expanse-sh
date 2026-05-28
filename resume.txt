@@ -10,7 +10,7 @@ lsmod | grep kvm
 
 3. Criar disco virtual
 
-qemu-img create -f qcow2 "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2" 40G
+qemu-img create -f qcow2 "/mnt/9114f27b-fa79-455b-9d50-c773408ecf95/DEV/Expanse OS/qm-vm/arch-os.qcow2" 25G
 
 4. Criar Install.
 
