@@ -42,9 +42,10 @@ cat <<EOT > src-tauri/tauri.conf.json
   "productName": "expanse-shell",
   "version": "0.1.0",
   "identifier": "com.expanse.shell",
-  "build": {
-    "beforeDevCommand": "npm run dev"
-  },
+"build": {
+  "beforeDevCommand": "npm run dev",
+  "devUrl": "http://localhost:1420"
+},
   "app": {
     "windows": [
       {
@@ -58,7 +59,8 @@ cat <<EOT > src-tauri/tauri.conf.json
     ]
   },
   "bundle": {
-    "active": true
+    "active": true,
+    "targets": ["updater"]
   }
 }
 EOT
@@ -70,11 +72,19 @@ npm run tauri build -- --debug || true
 echo "=== START DEV SCRIPT ==="
 cat <<EOT > start-dev.sh
 #!/bin/bash
-cd "$BASE/expanse-shell"
-# Inicia o Vite escutando na rede local interna
-npm run dev -- --host &
-sleep 5
-# Dispara o motor gráfico nativo do Tauri v2
+
+export PATH=$PATH:/home/expanse/.cargo/bin:/usr/bin
+
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=Hyprland
+
+export GDK_BACKEND=wayland
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+
+export LIBGL_ALWAYS_SOFTWARE=1
+
+cd /home/expanse/workspace/expanse-shell
+
 npm run tauri dev
 EOT
 
