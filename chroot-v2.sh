@@ -9,7 +9,7 @@ echo "=== BASE SYSTEM ==="
 pacman -S --noconfirm \
   efibootmgr \
   hyprland xdg-desktop-portal-hyprland kitty \
-  pipewire pipewire-pulse wireplumber \
+  pipewire pipewire-pulse wireplumber openssh \
   wl-clipboard xdg-utils hyprpaper noto-fonts-emoji
   
 systemctl enable NetworkManager
@@ -80,6 +80,9 @@ cat <<EOF > /home/$USER/.config/fontconfig/conf.d/75-noto-color-emoji.conf
 EOF
 
 fc-cache -fv
+
+sudo systemctl start sshd
+sudo systemctl enable sshd
 
 chown -R $USER:$USER /home/$USER/.config
 echo "Configuração do chroot concluída!"
